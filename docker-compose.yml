@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "9090:9000"
+    networks:
+      - web-app-network
+
+  backend:
+    build: ./backend
+    ports:
+      - "7000:6000"
+    volumes:
+      - ~/web-app/db:/app/db
+    networks:
+      - web-app-network
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "4001:3000"
+    volumes:
+      - ~/web-app/db:/var/lib/grafana
+      - ~/web-app/grafana.ini:/etc/grafana/grafana.ini  # Mounting the custom configuration
+    networks:
+      - web-app-network
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=your_password
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8080:8080"  # Change this if you want to use a different port
+      - "50000:50000"
+    volumes:
+      - ~/web-app/jenkins_home:/var/jenkins_home  # Store Jenkins data in ~/web-app/jenkins_home
+    networks:
+      - web-app-network
+    environment:
+      - JENKINS_OPTS=--httpPort=8080  # Optional: set Jenkins HTTP port
+    restart: always  # Automatically restart the Jenkins container
+    user: "1000:1000"
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "8081:9090"  # Exposing Prometheus on port 9091
+    volumes:
+      - ~/web-app/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml  # Mount your Prometheus configuration
+      - ~/web-app/prometheus_data:/prometheus  # Store Prometheus data in ~/web-app/prometheus_data
+    networks:
+      - web-app-network
+    restart: always  # Automatically restart the Prometheus container
+    user: "65534:65534"
+
+networks:
+  web-app-network:
+    driver: bridge
+
